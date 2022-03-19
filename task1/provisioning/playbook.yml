@@ -1,0 +1,50 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install apache2
+      apt: name=apache2 update_cache=yes state=latest
+    - name: Install python2
+      apt: name=python update_cache=yes state=latest
+    - name: Install python-pip
+      apt: name=python-pip update_cache=yes state=latest
+    - name: Install wsgi
+      apt: name=libapache2-mod-wsgi update_cache=yes state=latest
+    - name: Install flask python package
+      pip:
+        name: flask
+    - name: delete default site conf
+      file:
+        state: absent
+        path: /etc/apache2/sites-enabled/000-default.conf
+    - name: copy www directory
+      copy:
+        src: "var/www/"
+        dest: "/var/www"
+      notify: 
+        - restart apache2
+    - name: copy conf directory
+      copy:
+        src: "etc/apache2/sites-enabled/"
+        dest: "/etc/apache2/sites-enabled"
+      notify:
+        - restart apache2
+    - name: copy conf
+      copy:
+        src: "etc/apache2/apache2.conf"
+        dest: "/etc/apache2/apache2.conf"
+      notify:
+        - restart apache2
+    - name: Add the user 'vagrant' with a bash shell, appending the group 'www-data' to the user's groups
+      ansible.builtin.user:
+        name: vagrant
+        shell: /bin/bash
+        groups: www-data
+        append: yes
+      notify:
+        - restart apache2
+  handlers:
+    - name: restart apache2
+      service:
+        name: apache2
+        state: restarted
